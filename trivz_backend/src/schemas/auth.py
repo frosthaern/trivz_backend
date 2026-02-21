@@ -1,6 +1,7 @@
-from typing import ClassVar
-from pydantic import BaseModel, ConfigDict, EmailStr
 import uuid
+from typing import ClassVar
+
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserRegister(BaseModel):

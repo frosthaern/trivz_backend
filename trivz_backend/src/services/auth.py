@@ -1,14 +1,15 @@
+import hashlib
+import os
+import secrets
 import token
 import uuid
-import hashlib
-import secrets
 from datetime import datetime, timedelta, timezone
+
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from src.models.user import User, RefreshToken
-import os
 
+from src.models.user import RefreshToken, User
 
 SECRET_KEY = os.getenv("SECRET_KEY", "backupsecretkey")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
@@ -27,8 +28,8 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    payload = {"sub": str(user_id), "exp": expire}
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {"sub": str(user_id), "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -44,7 +45,9 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def create_refresh_token(db: Session, user_id: int, device_info: str = None) -> str:
+def create_refresh_token(
+    db: Session, user_id: int, device_info: str | None = None
+) -> str:
     raw_token = secrets.token_urlsafe(64)
     token_hash = _hash_token(raw_token)
 
