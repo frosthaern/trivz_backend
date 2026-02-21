@@ -1,6 +1,4 @@
 from fastapi import FastAPI
-from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
 import uvicorn
 
 from database import Base, engine

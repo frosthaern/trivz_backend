@@ -98,7 +98,7 @@ def create_user(
     user = User(
         username=username,
         email=email,
-        password=hash_password(plaintext_password),
+        hashed_pwd=hash_password(plaintext_password),
     )
     db.add(user)
     db.commit()
