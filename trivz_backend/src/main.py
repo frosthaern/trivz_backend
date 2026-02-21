@@ -4,13 +4,18 @@ from passlib.context import CryptContext
 import uvicorn
 
 from database import Base, engine
-
-Base.metadata.create_all(bind=engine)
+from routers import auth
 
 app = FastAPI(title="trivz backend server")
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+Base.metadata.create_all(bind=engine)
+
+app.include_router(auth.router)
+
+
+@app.get("/")
+def root():
+    return {"message": "API is running"}
 
 
 if __name__ == "__main__":
