@@ -2,7 +2,7 @@ from collections.abc import Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from models.user import User
+from models import User
 from services.auth import decode_access_token
 from database import SessionLocal
 from typing import Annotated
@@ -31,7 +31,5 @@ def get_current_user(
         )
     user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="user not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
     return user

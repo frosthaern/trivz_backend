@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from models.user import RefreshToken, User
+from models import RefreshToken, User
 
 import bcrypt
 
@@ -42,17 +42,14 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def create_refresh_token(
-    db: Session, user_id: int, device_info: str | None = None
-) -> str:
+def create_refresh_token(db: Session, user_id: int, device_info: str | None = None) -> str:
     raw_token = secrets.token_urlsafe(64)
     token_hash = _hash_token(raw_token)
 
     db_token = RefreshToken(
         user_id=user_id,
         token_hash=token_hash,
-        expires_at=datetime.now(timezone.utc)
-        + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
         device_info=device_info,
     )
     db.add(db_token)
@@ -76,9 +73,7 @@ def verify_refresh_token(db: Session, raw_token: str) -> RefreshToken | None:
 
 def revoke_refresh_token(db: Session, raw_token: str) -> None:
     token_hash = _hash_token(raw_token)
-    db_token = (
-        db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
-    )
+    db_token = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
     if db_token:
         db_token.revoked = True
         db.commit()
@@ -92,9 +87,7 @@ def get_user_by_email(db: Session, email: str) -> User | None:
     return db.query(User).filter(User.email == email).first()
 
 
-def create_user(
-    db: Session, username: str, email: str, plaintext_password: str
-) -> User:
+def create_user(db: Session, username: str, email: str, plaintext_password: str) -> User:
     user = User(
         username=username,
         email=email,

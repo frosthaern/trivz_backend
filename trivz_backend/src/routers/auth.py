@@ -3,7 +3,7 @@ from typing import Annotated
 from sqlalchemy.orm import Session
 
 from dependancies import get_current_user, get_db
-from models.user import User
+from models import User
 from schemas.auth import RefreshRequest, UserOut, UserRegister, TokenOut
 from services import auth as auth_service
 
@@ -18,16 +18,12 @@ def register(payload: UserRegister, db: Annotated[Session, Depends(get_db)]):
     if auth_service.get_user_by_email(db, payload.email):
         raise HTTPException(status_code=400, detail="Email already exists")
 
-    user = auth_service.create_user(
-        db, payload.username, payload.email, payload.password
-    )
+    user = auth_service.create_user(db, payload.username, payload.email, payload.password)
     return user
 
 
 @router.post("/token", response_model=TokenOut)
-def login(
-    payload: UserRegister, request: Request, db: Annotated[Session, Depends(get_db)]
-):
+def login(payload: UserRegister, request: Request, db: Annotated[Session, Depends(get_db)]):
     user = auth_service.get_user_by_username(db, payload.username)
     if not user or not auth_service.verify_password(payload.password, user.hashed_pwd):
         raise HTTPException(status_code=401, detail="Invalid credential")
@@ -35,9 +31,7 @@ def login(
         raise HTTPException(status_code=403, detail="Account is disabled")
 
     access_token = auth_service.create_access_token(user.id)
-    refresh_token = auth_service.create_refresh_token(
-        db, user.id, device_info=request.headers.get("user-agent")
-    )
+    refresh_token = auth_service.create_refresh_token(db, user.id, device_info=request.headers.get("user-agent"))
     return TokenOut(access_token=access_token, refresh_token=refresh_token)
 
 
