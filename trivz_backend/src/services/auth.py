@@ -3,12 +3,11 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from models import RefreshToken, User
-
-import bcrypt
 
 SECRET_KEY = os.getenv("SECRET_KEY", "backupsecretkey")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
