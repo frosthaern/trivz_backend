@@ -25,7 +25,7 @@ class ConnectionManager:
         logger.info(f"User {user_id} disconnected from room {room_code}")
 
     # need to do something for the type of dict you are sending
-    async def broadcast(self, room_code: str, event: dict[Any, None]):
+    async def broadcast(self, room_code: str, event: dict[Any, Any]):
         if room_code not in self.rooms:
             return
         disconnected: list[int] = []
@@ -38,7 +38,7 @@ class ConnectionManager:
         for user_id in disconnected:
             await self.disconnect(room_code, user_id)
 
-    async def send_to_user(self, room_code: str, user_id: int, event: dict[Any, None]):
+    async def send_to_user(self, room_code: str, user_id: int, event: dict[Any, Any]):
         if room_code not in self.rooms:
             return
         for uid, websocket in self.rooms[room_code]:

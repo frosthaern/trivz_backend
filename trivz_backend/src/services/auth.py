@@ -10,8 +10,8 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.dependancies import get_db, oauth2_scheme
 from src.models import RefreshToken, User
+from src.services.db import get_db, oauth2_scheme
 
 SECRET_KEY = os.getenv("SECRET_KEY", "backupsecretkey")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
