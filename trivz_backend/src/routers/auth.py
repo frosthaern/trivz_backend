@@ -1,44 +1,14 @@
-from typing import Annotated, ClassVar
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy.orm import Session
 
-from dependancies import get_current_user, get_db
-from models import User
 from services import auth as auth_service
+from src.dependancies import get_db
+from src.models import User
+from src.schemas import RefreshRequest, TokenOut, UserOut, UserRegister
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-class UserRegister(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-
-class UserOut(BaseModel):
-    id: int
-    username: str
-    email: str
-    is_active: bool
-    is_verified: bool
-    model_config: ClassVar[ConfigDict] = ConfigDict(from_attributes=True)
-
-
-class TokenOut(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-class RefreshRequest(BaseModel):
-    refresh_token: str
 
 
 @router.post("/register", response_model=UserOut, status_code=201)

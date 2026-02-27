@@ -2,13 +2,16 @@ import hashlib
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
+from typing import Annotated
 
 import bcrypt
+from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import RefreshToken, User
+from src.dependancies import get_db, oauth2_scheme
+from src.models import RefreshToken, User
 
 SECRET_KEY = os.getenv("SECRET_KEY", "backupsecretkey")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
@@ -108,4 +111,21 @@ def create_user(db: Session, username: str, email: str, plaintext_password: str)
     db.add(user)
     db.commit()
     db.refresh(user)
+    return user
+
+
+def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User:
+    user_id = decode_access_token(token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invlid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
     return user
