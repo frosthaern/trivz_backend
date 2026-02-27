@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from services import auth as auth_service
 from src.dependancies import get_db
 from src.models import User
-from src.schemas import RefreshRequest, TokenOut, UserOut, UserRegister
+from src.schemas.user import RefreshRequest, TokenOut, UserOut, UserRegister
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -55,5 +55,5 @@ def logout(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.get("/me", response_model=UserOut)
-def me(current_user: Annotated[User, Depends(get_current_user)]):
+def me(current_user: Annotated[User, Depends(auth_service.get_current_user)]):
     return current_user
