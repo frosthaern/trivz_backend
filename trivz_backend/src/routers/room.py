@@ -45,6 +45,7 @@ async def create_room(db: DB, current_user: CurrentUser):
 
 @router.get("/{room_code}", response_model=RoomDetailOut)
 async def get_room(room_code: str, db: DB, current_user: CurrentUser):
+    # idk if they are using CurrentUser just because they want to make it an authenticated endpoint or something
     room = db.execute(select(Room).filter(Room.room_code == room_code)).scalars().first()
     if not room:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
@@ -146,6 +147,7 @@ async def request_to_join(room_code: str, db: DB, current_user: CurrentUser):
     return {"message": "Join request sent"}
 
 
+# master sends user_id and to either accept him or reject him kinda request to this endpoint
 @router.post("/{room_code}/respond")
 async def respond_to_request(room_code: str, body: AcceptReject, db: DB, current_user: CurrentUser):
     room = db.execute(select(Room).filter(Room.room_code == room_code)).scalars().first()
