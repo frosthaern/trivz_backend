@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -41,23 +40,23 @@ def get_session_or_404(session_id: int, room_id: int, db: Session) -> GameSessio
     return session
 
 
-async def fetch_questions(difficulty: str, category: int | None, q_type: str, count: int) -> list[dict]:
-    url = "https://opentdb.com/api.php"
-    params = {
-        "amount": count,
-        "difficulty": difficulty,
-        "type": q_type,
-    }
-    if category:
-        params["category"] = category
+# async def fetch_questions(difficulty: str, category: int | None, q_type: str, count: int) -> list[dict]:  # make shape for questions or things that you get from opentrivia org
+#     url = "https://opentdb.com/api.php"
+#     params = {
+#         "amount": count,
+#         "difficulty": difficulty,
+#         "type": q_type,
+#     }
+#     if category:
+#         params["category"] = category
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, params=params)
-        data = response.json()
+#     async with httpx.AsyncClient() as client:
+#         response = await client.get(url, params=params)
+#         data = response.json()
 
-    if data["response_code"] != 0:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to fetch questions from Open Trivia DB")
-    return data["results"]
+#     if data["response_code"] != 0:
+#         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to fetch questions from Open Trivia DB")
+#     return data["results"]
 
 
 @router.post("/{room_code}/sessions", response_model=SessionOut)
