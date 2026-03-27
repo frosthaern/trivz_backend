@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -115,8 +115,8 @@ def create_user(db: Session, username: str, email: str, plaintext_password: str)
 
 
 def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[Session, Depends(get_db)],
+        token: Annotated[str, Depends(oauth2_scheme)],
+        db: Annotated[Session, Depends(get_db)],
 ) -> User:
     user_id = decode_access_token(token)
     if not user_id:
@@ -125,7 +125,12 @@ def get_current_user(
             detail="Invlid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    user = db.query(User).filter(User.id == user_id).first()
+    stmt = select(User).filter(User.id == user_id)
+    user = db.execute(stmt).scalars().first()
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
     return user
+
+
+async def get_device_info(request: Request) -> str | None:
+    return request.headers.get("device-info")

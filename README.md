@@ -8,3 +8,4 @@
 
 # todo
 - add auth + frontend and test auth, in the backend add like a database for storing auth info and
+- combine the register and token endpoint and then also clone the frontend and run it and see
