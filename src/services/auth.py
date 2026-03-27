@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import bcrypt
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -115,8 +115,8 @@ def create_user(db: Session, username: str, email: str, plaintext_password: str)
 
 
 def get_current_user(
-        token: Annotated[str, Depends(oauth2_scheme)],
-        db: Annotated[Session, Depends(get_db)],
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> User:
     user_id = decode_access_token(token)
     if not user_id:

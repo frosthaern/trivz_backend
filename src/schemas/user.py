@@ -16,7 +16,7 @@ class UserLogin(BaseModel):
     password: str
 
 
-class UserOut(BaseModel):
+class UserResponse(BaseModel):
     id: int
     username: str
     email: str
@@ -25,7 +25,7 @@ class UserOut(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(from_attributes=True)
 
 
-class TokenOut(BaseModel):
+class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
