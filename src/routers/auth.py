@@ -12,7 +12,7 @@ from src.services.db import get_db
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register_token", response_model=TokenResponse, status_code=400)
+@router.post("/register_token", response_model=TokenResponse, status_code=201)
 def register_token(payload: UserRegister, db: Annotated[Session, Depends(get_db)], device_info: Annotated[str, Depends(get_device_info)]):
     user = aus.get_user_by_username(db, payload.username)
     if user is None:
