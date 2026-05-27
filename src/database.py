@@ -1,9 +1,10 @@
-import os
 from collections.abc import AsyncGenerator
 
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+
+from src.config import get_database_url
 
 
 class Base(DeclarativeBase):
@@ -13,7 +14,7 @@ class Base(DeclarativeBase):
 async def get_db_connection():
     if not load_dotenv():
         raise RuntimeError("Failed to load environment variables")
-    db_url: str = os.getenv("DB_URL", "sqlite+aiosqlite:///./test.db")
+    db_url: str = get_database_url()
     return create_async_engine(db_url, echo=True)
 
 
