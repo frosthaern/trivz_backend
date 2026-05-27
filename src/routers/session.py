@@ -5,11 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import GameSession, InviteStatus, Room, RoomMember, RoomStatus, SessionScore, User
-from schemas.session import LeaderboardOut, SessionCreate, SessionOut
+from src.models import GameSession, InviteStatus, Room, RoomMember, RoomStatus, SessionScore, User
+from src.schemas.session import LeaderboardOut, SessionCreate, SessionOut, SessionScoreOut
 from src.services.auth import get_current_user
 from src.services.db import get_db
-from ws import manager
+from src.services.trivia import trivia_client
+from src.ws import manager
 
 router = APIRouter(prefix="/rooms", tags=["sessions"])
 
@@ -40,32 +41,13 @@ def get_session_or_404(session_id: int, room_id: int, db: Session) -> GameSessio
     return session
 
 
-# async def fetch_questions(difficulty: str, category: int | None, q_type: str, count: int) -> list[dict]:  # make shape for questions or things that you get from opentrivia org
-#     url = "https://opentdb.com/api.php"
-#     params = {
-#         "amount": count,
-#         "difficulty": difficulty,
-#         "type": q_type,
-#     }
-#     if category:
-#         params["category"] = category
-
-#     async with httpx.AsyncClient() as client:
-#         response = await client.get(url, params=params)
-#         data = response.json()
-
-#     if data["response_code"] != 0:
-#         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to fetch questions from Open Trivia DB")
-#     return data["results"]
-
-
 @router.post("/{room_code}/sessions", response_model=SessionOut)
 async def create_session(room_code: str, body: SessionCreate, db: DB, current_user: CurrentUser):
     room = get_room_or_404(room_code, db)
 
     if room.master_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the master can create a session")
-    if room.status == RoomStatus.in_progress:
+    if room.status == RoomStatus.IN_PROGRESS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A session is already in progress")
 
     session = GameSession(
@@ -115,7 +97,7 @@ async def start_session(room_code: str, session_id: int, db: DB, current_user: C
 
     if room.master_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the master can start the session")
-    if room.status == RoomStatus.in_progress:
+    if room.status == RoomStatus.IN_PROGRESS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A session is already in progress")
 
     session = get_session_or_404(session_id, room.id, db)
@@ -125,7 +107,7 @@ async def start_session(room_code: str, session_id: int, db: DB, current_user: C
         db.execute(
             select(RoomMember).filter(
                 RoomMember.room_id == room.id,
-                RoomMember.invite_status == InviteStatus.accepted,
+                RoomMember.invite_status == InviteStatus.ACCEPTED,
             )
         )
         .scalars()
@@ -135,15 +117,21 @@ async def start_session(room_code: str, session_id: int, db: DB, current_user: C
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Need at least 2 players to start")
 
     # fetch questions from open trivia db
-    questions = await fetch_questions(
-        difficulty=session.difficulty.value,
-        category=session.category,
-        q_type=session.type.value,
-        count=session.question_count,
-    )
+    try:
+        questions = await trivia_client.fetch(
+            count=session.question_count,
+            difficulty=session.difficulty.value,
+            q_type=session.type.value,
+            category=session.category,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to fetch questions: {str(e)}",
+        ) from None
 
     # flip room status
-    room.status = RoomStatus.in_progress
+    room.status = RoomStatus.IN_PROGRESS
     db.commit()
 
     # broadcast game starting with all questions at once
@@ -187,10 +175,11 @@ async def end_session(
         db.add(session_score)
 
     session.ended_at = datetime.now(UTC)
-    room.status = RoomStatus.waiting  # room goes back to waiting for next session
+    room.status = RoomStatus.WAITING  # room goes back to waiting for next session
     db.commit()
 
-    await manager.broadcast(room_code, {"event": "game_over", "leaderboard": [{"user_id": e["user_id"], "score": e["score"], "rank": i + 1} for i, e in enumerate(sorted_scores)]})
+    leaderboard = [{"user_id": e["user_id"], "score": e["score"], "rank": i + 1} for i, e in enumerate(sorted_scores)]
+    await manager.broadcast(room_code, {"event": "game_over", "leaderboard": leaderboard})
 
     return {"message": "Session ended"}
 
@@ -200,6 +189,11 @@ async def get_leaderboard(room_code: str, session_id: int, db: DB, current_user:
     room = get_room_or_404(room_code, db)
     session = get_session_or_404(session_id, room.id, db)
 
-    scores = db.execute(select(SessionScore).filter(SessionScore.session_id == session.id).order_by(SessionScore.rank)).scalars().all()
+    scores = (
+        db.execute(select(SessionScore).filter(SessionScore.session_id == session.id).order_by(SessionScore.rank))
+        .scalars()
+        .all()
+    )
 
-    return LeaderboardOut(session_id=session.id, scores=scores)
+    score_outs = [SessionScoreOut.model_validate(s) for s in scores]
+    return LeaderboardOut(session_id=session.id, scores=score_outs)

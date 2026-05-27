@@ -17,8 +17,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
-    refresh_token: Mapped[list[RefreshToken]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+    refresh_token: Mapped[list["RefreshToken"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class RefreshToken(Base):
@@ -35,15 +39,28 @@ class RefreshToken(Base):
     user: Mapped[User] = relationship(back_populates="refresh_token")
 
 
-class RoomStatus(str, enum.Enum):
-    waiting = "waiting"
-    in_progress = "in_progress"
-    finished = "finished"
+class RoomStatus(enum.StrEnum):
+    WAITING = enum.auto()
+    IN_PROGRESS = enum.auto()
+    FINSIHED = enum.auto()
 
 
-class SessionType(str, enum.Enum):
-    boolean = "boolean"
-    multiple = "multiple"
+class SessionType(enum.StrEnum):
+    BOOLEAN = enum.auto()
+    MULTIPLE = enum.auto()
+
+
+class Difficulty(enum.StrEnum):
+    EASY = enum.auto()
+    MEDIUM = enum.auto()
+    HARD = enum.auto()
+
+
+class InviteStatus(enum.StrEnum):
+    INVITED = enum.auto()
+    REQUESTED = enum.auto()
+    ACCEPTED = enum.auto()
+    REJECTED = enum.auto()
 
 
 class Room(Base):
@@ -52,24 +69,11 @@ class Room(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     room_code: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     master_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id", ondelete="CASCADE"), index=True)
-    status: Mapped[RoomStatus] = mapped_column(Enum(RoomStatus), default=RoomStatus.waiting, nullable=False)
+    status: Mapped[RoomStatus] = mapped_column(Enum(RoomStatus), default=RoomStatus.WAITING, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
-    members: Mapped[list[RoomMember]] = relationship(back_populates="room", cascade="all, delete-orphan")
-    sessions: Mapped[list[GameSession]] = relationship(back_populates="room", cascade="all, delete-orphan")
-
-
-class Difficulty(str, enum.Enum):
-    easy = "easy"
-    medium = "medium"
-    hard = "hard"
-
-
-class InviteStatus(str, enum.Enum):
-    invited = "invited"
-    requested = "requested"
-    accepted = "accepted"
-    rejected = "rejected"
+    members: Mapped[list["RoomMember"]] = relationship(back_populates="room", cascade="all, delete-orphan")
+    sessions: Mapped[list["GameSession"]] = relationship(back_populates="room", cascade="all, delete-orphan")
 
 
 class RoomMember(Base):
@@ -89,15 +93,15 @@ class GameSession(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     room_id: Mapped[int] = mapped_column(Integer, ForeignKey("room.id", ondelete="CASCADE"))
-    difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty), default=Difficulty.medium, nullable=False)
-    category: Mapped[int | None] = mapped_column(Integer, nullable=True)  # Open Trivia DB category ID, null = any
-    type: Mapped[SessionType] = mapped_column(Enum(SessionType), default=SessionType.multiple, nullable=False)  # Open Trivia DB question category
+    difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty), default=Difficulty.MEDIUM, nullable=False)
+    category: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    type: Mapped[SessionType] = mapped_column(Enum(SessionType), default=SessionType.MULTIPLE, nullable=False)
     question_count: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     room: Mapped[Room] = relationship(back_populates="sessions")
-    scores: Mapped[list[SessionScore]] = relationship(back_populates="session", cascade="all, delete-orphan")
+    scores: Mapped[list["SessionScore"]] = relationship(back_populates="session", cascade="all, delete-orphan")
 
 
 class SessionScore(Base):

@@ -13,7 +13,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register_token", response_model=TokenResponse, status_code=201)
-def register_token(payload: UserRegister, db: Annotated[Session, Depends(get_db)], device_info: Annotated[str, Depends(get_device_info)]):
+def register_token(
+    payload: UserRegister,
+    db: Annotated[Session, Depends(get_db)],
+    device_info: Annotated[str, Depends(get_device_info)],
+):
     user = aus.get_user_by_username(db, payload.username)
     if user is None:
         user = aus.create_user(db, payload.username, payload.email, payload.password)

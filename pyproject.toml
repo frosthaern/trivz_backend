@@ -3,7 +3,7 @@ name = "trivz-backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "bcrypt>=5.0.0",
     "dotenv>=0.9.9",
@@ -20,7 +20,21 @@ dependencies = [
 
 
 [tool.ruff]
-line-length = 200
+line-length = 120
 
 [tool.ruff.lint]
-extend-select = ["I"]
+extend-select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "TCH",  # flake8-type-checking
+]
+ignore = ["B008"]  # FastAPI's Depends() in function defaults
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]

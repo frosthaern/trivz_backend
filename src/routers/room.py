@@ -4,12 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from schemas.room import AcceptReject, InviteRequest, RoomDetailOut, RoomOut
 from src.models import InviteStatus, Room, RoomMember, RoomStatus, User
+from src.schemas.room import AcceptReject, InviteRequest, RoomDetailOut, RoomOut
 from src.services.auth import get_current_user
 from src.services.db import get_db
 from src.services.room import generate_room_code
-from ws import manager
+from src.ws import manager
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -35,7 +35,7 @@ async def create_room(db: DB, current_user: CurrentUser):
     member = RoomMember(
         room_id=room.id,
         user_id=current_user.id,
-        invite_status=InviteStatus.accepted,
+        invite_status=InviteStatus.ACCEPTED,
     )
     db.add(member)
     db.commit()
@@ -70,21 +70,30 @@ async def invite_user(room_code: str, body: InviteRequest, db: DB, current_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
     if room.master_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the master can invite")
-    if room.status != RoomStatus.waiting:
+    if room.status != RoomStatus.WAITING:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Room is not in waiting state")
 
     target_user = db.execute(select(User).filter(User.username == body.username)).scalars().first()
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    already_member = db.execute(select(RoomMember).filter(RoomMember.room_id == room.id, RoomMember.user_id == target_user.id)).scalars().first()
+    already_member = (
+        db.execute(
+            select(RoomMember).filter(
+                RoomMember.room_id == room.id,
+                RoomMember.user_id == target_user.id,
+            )
+        )
+        .scalars()
+        .first()
+    )
     if already_member:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is already in the room")
 
     member = RoomMember(
         room_id=room.id,
         user_id=target_user.id,
-        invite_status=InviteStatus.invited,
+        invite_status=InviteStatus.INVITED,
     )
     db.add(member)
     db.commit()
@@ -109,7 +118,7 @@ async def request_to_join(room_code: str, db: DB, current_user: CurrentUser):
     room = db.execute(select(Room).filter(Room.room_code == room_code)).scalars().first()
     if not room:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
-    if room.status != RoomStatus.waiting:
+    if room.status != RoomStatus.WAITING:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Room is not in waiting state")
 
     already_member = (
@@ -128,7 +137,7 @@ async def request_to_join(room_code: str, db: DB, current_user: CurrentUser):
     member = RoomMember(
         room_id=room.id,
         user_id=current_user.id,
-        invite_status=InviteStatus.requested,
+        invite_status=InviteStatus.REQUESTED,
     )
     db.add(member)
     db.commit()
@@ -161,7 +170,7 @@ async def respond_to_request(room_code: str, body: AcceptReject, db: DB, current
             select(RoomMember).filter(
                 RoomMember.room_id == room.id,
                 RoomMember.user_id == body.user_id,
-                RoomMember.invite_status == InviteStatus.requested,
+                RoomMember.invite_status == InviteStatus.REQUESTED,
             )
         )
         .scalars()
@@ -170,7 +179,7 @@ async def respond_to_request(room_code: str, body: AcceptReject, db: DB, current
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No pending request from this user")
 
-    member.invite_status = InviteStatus.accepted if body.accept else InviteStatus.rejected
+    member.invite_status = InviteStatus.ACCEPTED if body.accept else InviteStatus.REJECTED
     db.commit()
 
     # notify the requesting user
@@ -207,7 +216,7 @@ async def respond_to_invite(room_code: str, body: AcceptReject, db: DB, current_
             select(RoomMember).filter(
                 RoomMember.room_id == room.id,
                 RoomMember.user_id == current_user.id,
-                RoomMember.invite_status == InviteStatus.invited,
+                RoomMember.invite_status == InviteStatus.INVITED,
             )
         )
         .scalars()
@@ -216,7 +225,7 @@ async def respond_to_invite(room_code: str, body: AcceptReject, db: DB, current_
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No pending invite found")
 
-    member.invite_status = InviteStatus.accepted if body.accept else InviteStatus.rejected
+    member.invite_status = InviteStatus.ACCEPTED if body.accept else InviteStatus.REJECTED
     db.commit()
 
     if body.accept:

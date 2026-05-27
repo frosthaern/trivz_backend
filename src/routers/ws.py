@@ -1,19 +1,23 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import Annotated
 
-from ws import manager
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
-# from dependencies import get_current_user_ws  # we'll write this next
+from src.models import User
+from src.services.ws import get_current_user_ws
+from src.ws import manager
 
 router = APIRouter()
+
+CurrentUser = Annotated[User, Depends(get_current_user_ws)]
 
 
 @router.websocket("/ws/{room_code}")
 async def websocket_endpoint(
     room_code: str,
     websocket: WebSocket,
-    # user_id: int = Depends(get_current_user_ws)  # uncomment when auth is ready
+    user: CurrentUser,
 ):
-    user_id = 1  # hardcode for now, replace with auth later
+    user_id = user.id
     await manager.connect(room_code, user_id, websocket)
     try:
         while True:

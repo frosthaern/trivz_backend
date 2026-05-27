@@ -1,3 +1,3 @@
-from ws.manager import ConnectionManager
+from .manager import ConnectionManager
 
 manager = ConnectionManager()

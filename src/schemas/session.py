@@ -6,9 +6,9 @@ from src.models import Difficulty, SessionType
 
 
 class SessionCreate(BaseModel):
-    difficulty: Difficulty = Difficulty.medium
+    difficulty: Difficulty = Difficulty.MEDIUM
     category: int | None = None
-    type: SessionType = SessionType.multiple
+    type: SessionType = SessionType.MULTIPLE
     question_count: int = 10
 
 

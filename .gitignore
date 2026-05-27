@@ -13,3 +13,5 @@ example.db
 .git
 output*
 
+# database files
+trivz.db

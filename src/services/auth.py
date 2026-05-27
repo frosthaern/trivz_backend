@@ -1,7 +1,7 @@
 import hashlib
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import bcrypt
@@ -28,7 +28,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": str(user_id), "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -52,7 +52,7 @@ def create_refresh_token(db: Session, user_id: int, device_info: str | None = No
     db_token = RefreshToken(
         user_id=user_id,
         token_hash=token_hash,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_at=datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
         device_info=device_info,
     )
     db.add(db_token)
@@ -65,7 +65,7 @@ def verify_refresh_token(db: Session, raw_token: str) -> RefreshToken | None:
     stmt = select(RefreshToken).filter(
         RefreshToken.token_hash == token_hash,
         RefreshToken.revoked.is_(False),
-        RefreshToken.expires_at > datetime.now(timezone.utc),
+        RefreshToken.expires_at > datetime.now(UTC),
     )
     db_token = db.execute(stmt).scalars().first()
     return db_token
@@ -111,7 +111,7 @@ def get_current_user(
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invlid or expired token",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
     stmt = select(User).filter(User.id == user_id)
